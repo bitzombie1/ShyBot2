@@ -9,7 +9,7 @@ from common import clock, draw_str
 import time
 
 
-# construct the argument parse and parse the arguments
+# TODO construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-n", "--num-frames", type=int, default=100,
 	help="# of frames to loop over for FPS test")
@@ -32,9 +32,9 @@ config.enable_stream(rs.stream.color, c_width, c_heigth, rs.format.bgr8, 30)
 profile = pipeline.start(config)
 time.sleep(2)
 
-dev = profile.get_device()
-sensors = dev.query_sensors()
-
+depth_sensor = profile.get_device().first_depth_sensor()
+motion_range = depth_sensor.get_option(rs.option.motion_range)
+print(motion_range)
 
 frontFaceRecog = "recogs/haarcascade_frontalface_alt2.xml"
 sideFaceRecog = "recogs/haarcascade_profileface.xml"
@@ -76,7 +76,7 @@ def loadTargets(rectList,depthMat):
 	for box in rectList:
 		x,y = findCenter(box)
 		z = listMedian(depthMat[y*2])
-		print(depthMat[y*2])
+		#print(depthMat[y*2])
 		time = int(clock())
 		target.append([x,y,z,time])
 		#cv2.circle(depthMat,(x*2,y*2),5,(255,255,255))
@@ -115,7 +115,7 @@ def findCenter(box):
 
 def flipX(rects):
 	rects_out = []
-	mid = c_width/2
+	mid = int(c_width/2)
 	for x1, y1, x2, y2 in rects:
 		cent = x2 - x1
 		if cent > mid:
