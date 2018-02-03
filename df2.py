@@ -32,9 +32,20 @@ config.enable_stream(rs.stream.color, c_width, c_heigth, rs.format.bgr8, 30)
 profile = pipeline.start(config)
 time.sleep(2)
 
+# get depth device and set depth range
 depth_sensor = profile.get_device().first_depth_sensor()
+depth_sensor.set_option(rs.option.motion_range, 24)
 motion_range = depth_sensor.get_option(rs.option.motion_range)
-print(motion_range)
+print("Motion range: ", motion_range)
+
+# get depth scale  do I really need this?
+depth_scale = depth_sensor.get_depth_scale()
+print ("Depth Scale is: " , depth_scale)
+
+# Create an align object
+align_to = rs.stream.color
+align = rs.align(align_to)
+
 
 frontFaceRecog = "recogs/haarcascade_frontalface_alt2.xml"
 sideFaceRecog = "recogs/haarcascade_profileface.xml"
@@ -50,12 +61,15 @@ def getFrames():
 		while True:
         		# Wait for a coherent pair of frames: depth and color
 			frames = pipeline.wait_for_frames()
-			depth_frame = frames.get_depth_frame()
+			aligned_frames = align.proccess(frames)
+			aligned_depth_frame = aligned_frames.get_depth_frame()
+			
+			#depth_frame = frames.get_depth_frame()
 			color_frame = frames.get_color_frame()
-			if not depth_frame or not color_frame:
+			if not aligned_depth_frame or not color_frame:
 				continue
 			# Convert images to numpy arrays
-			depth_image = np.asanyarray(depth_frame.get_data())
+			depth_image = np.asanyarray(aligned_depth_frame.get_data())
 			color_image = np.asanyarray(color_frame.get_data())
 			return (color_image, depth_image)
 		
@@ -75,7 +89,8 @@ def faceDetect(img, cascade):
 def loadTargets(rectList,depthMat):
 	for box in rectList:
 		x,y = findCenter(box)
-		z = listMedian(depthMat[y*2])
+		#z = listMedian(depthMat[y*2])
+		z = depthMat[y,x]
 		#print(depthMat[y*2])
 		time = int(clock())
 		target.append([x,y,z,time])
