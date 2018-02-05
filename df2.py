@@ -1,26 +1,30 @@
 from __future__ import print_function
 from imutils.video import FPS
 import argparse
-import imutils
+#import imutils
 import cv2
 import pyrealsense2 as rs
 import numpy as np
 from common import clock, draw_str
+import serial
 import time
 
 
-# TODO construct the argument parse and parse the arguments
+# parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-n", "--num-frames", type=int, default=100,
-	help="# of frames to loop over for FPS test")
-ap.add_argument("-d", "--display", type=int, default=-1,
+ap.add_argument("-d", "--display", type=int, default=1,
 	help="Whether or not frames should be displayed")
-ap.add_argument("-t", "--thread", type=int, default=-1,
-	help="Whether or not threads are checked")
+ap.add_argument("-m", "--mintarg", type=int, default=5,
+	help="minimum targets seen before bot reacts")
 args = vars(ap.parse_args())
+display = args["display"]
+minNumTarget = args["mintarg"] 
 
 c_width = 320
 c_heigth = 240
+
+# open serial connection with Arduino
+ser = serial.Serial('/dev/ttyACM0',9600,timeout=0)
 
 # Configure depth and color streams
 pipeline = rs.pipeline()
@@ -34,7 +38,7 @@ time.sleep(2)
 
 # get depth device and set depth range
 depth_sensor = profile.get_device().first_depth_sensor()
-depth_sensor.set_option(rs.option.motion_range, 24)
+depth_sensor.set_option(rs.option.motion_range, 34)
 motion_range = depth_sensor.get_option(rs.option.motion_range)
 print("Motion range: ", motion_range)
 
@@ -53,6 +57,7 @@ upperBodRecog = "recogs/haarcascade_upperbody.xml"
 
 target = []  # holds queue of targets(x value,y value, z value, time stamp sec)
 expTime = 2  # target expiration time in sec
+
 highDepth = 0 # temp var to hold longest depth
 
 # helper functions ***************************
@@ -86,6 +91,14 @@ def faceDetect(img, cascade):
 	rects[:,2:] += rects[:,:2]
 	return rects
 
+def sendSerial(x,y,z):
+	arduReady = str(ser.readline())
+	if "OK" in arduReady:
+		print("ok")
+	else:
+		print("NAK")
+
+
 def loadTargets(rectList,depthMat):
 	for box in rectList:
 		x,y = findCenter(box)
@@ -113,6 +126,7 @@ def findHotTarget(targetList):
 def killTargets(targetList):
 	nowTime = int(clock())
 	indx =0
+	#print(len(targetList))
 	for targ in targetList:
 		time = targ[3]
 		if (time + expTime) < nowTime:
@@ -197,18 +211,19 @@ if __name__ == '__main__':
 		loadTargets(rects,depth_img)
 		
 		killTargets(target)
-		x,y,z = findHotTarget(target)
-		cv2.circle(vis,(x,y),5,(255,255,255))
-		draw_str(vis, (x+5, y+10), str(z))
+		if len(target) > minNumTarget:
+			x,y,z = findHotTarget(target)
+			cv2.circle(vis,(x,y),5,(255,255,255))
+			draw_str(vis, (x+5, y+10), str(z))
+			sendSerial(x,y,z)
 		
 		dt = clock() -t
 		draw_str(vis, (20, 20), 'time: %.1f ms' % (dt*1000))
-		# Show images
-		cv2.namedWindow('RealSense', cv2.WINDOW_NORMAL) #cv2.WINDOW_AUTOSIZE
-		cv2.imshow('RealSense', vis)
+		# Show images or not
+		if display > 0:
+			cv2.namedWindow('RealSense', cv2.WINDOW_NORMAL) #cv2.WINDOW_AUTOSIZE
+			cv2.imshow('RealSense', vis)
 
-		#cv2.namedWindow('depth', cv2.WINDOW_NORMAL) #cv2.WINDOW_AUTOSIZE
-		#cv2.imshow('depth', depth_colormap)
 
 		if 0xFF & cv2.waitKey(1) == 27:
 			break
