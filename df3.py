@@ -16,9 +16,12 @@ ap.add_argument("-d", "--display", type=int, default=1,
 	help="Whether or not frames should be displayed")
 ap.add_argument("-m", "--mintarg", type=int, default=5,
 	help="minimum targets seen before bot reacts")
+ap.add_argument("-f", "--showface", type=int, default=0,
+	help="Show face targets 0/1")
 args = vars(ap.parse_args())
 display = args["display"]
 minNumTarget = args["mintarg"] 
+showFace = args["showface"]
 
 c_width = 320
 c_heigth = 240
@@ -38,9 +41,13 @@ time.sleep(2)
 
 # get depth device and set depth range
 depth_sensor = profile.get_device().first_depth_sensor()
-depth_sensor.set_option(rs.option.motion_range, 94)
+depth_sensor.set_option(rs.option.motion_range, 99)  #94
 motion_range = depth_sensor.get_option(rs.option.motion_range)
 print("Motion range: ", motion_range)
+
+depth_sensor.set_option(rs.option.filter_option, 1)
+filt = depth_sensor.get_option(rs.option.filter_option)
+print("filter option: ", filt)
 
 # get depth scale  do I really need this?
 depth_scale = depth_sensor.get_depth_scale()
@@ -57,7 +64,7 @@ upperBodRecog = "recogs/haarcascade_upperbody.xml"
 
 target = []  # holds queue of targets(x value,y value, z value, time stamp sec)
 expTime = 2  # target expiration time in sec  2
-
+minMotion = 10 # value 0 to 255 minimum ROI movement required to load target
 highDepth = 0 # temp var to hold longest depth
 
 # helper functions ***************************
@@ -76,7 +83,7 @@ def getFrames():
 			# Convert images to numpy arrays
 			depth_image = np.asanyarray(aligned_depth_frame.get_data())
 			color_image = np.asanyarray(color_frame.get_data())
-			return (color_image, depth_image)
+			return (color_image, depth_image)                                            
 		
 	except Exception as e:
 		print("Error grabing frames")
@@ -84,7 +91,7 @@ def getFrames():
 		return ([], [])
 
 def faceDetect(img, cascade):
-	rects = cascade.detectMultiScale(img, scaleFactor=1.3, minNeighbors=1, minSize=(10, 10),#minSize=(10, 10)
+	rects = cascade.detectMultiScale(img, scaleFactor=1.3, minNeighbors=0, minSize=(10, 10),#minSize=(10, 10)
                                      flags=cv2.CASCADE_SCALE_IMAGE) #scaleFactor=1.3
 	if len(rects) == 0:
 		return []
@@ -94,20 +101,24 @@ def faceDetect(img, cascade):
 def sendSerial(x,y,z):
 	arduReady = str(ser.readline())
 	if "OK" in arduReady:
-		print("ok")
+		#print("ok")
+		blah =4
 	else:
-		print("NAK")
+		#print("NAK")
+		blah =5
 
-
-def loadTargets(rectList,depthMat):
+def loadTargets(rectList,depthMat,fgMask):
 	for box in rectList:
-		x,y = findCenter(box)
-		#z = listMedian(depthMat[y*2])
-		z = depthMat[y,x]
-		#print(depthMat[y*2])
-		time = int(clock())
-		target.append([x,y,z,time])
-		#cv2.circle(depthMat,(x*2,y*2),5,(255,255,255))
+		if int(cv2.mean(fgMask[box[1]:box[3],box[0]:box[2]])[0]) > minMotion:
+			x,y = findCenter(box)
+			#z = listMedian(depthMat[y*2])
+			z = depthMat[y,x]
+			if z == 0:
+				z = 1500
+			#print(depthMat[y*2])
+			time = int(clock())
+			target.append([x,y,z,time])
+			#cv2.circle(depthMat,(x*2,y*2),5,(255,255,255))
 		
 def findHotTarget(targetList):
 	if len(targetList) < 3:
@@ -118,9 +129,11 @@ def findHotTarget(targetList):
 	for targ in targetList:
 		xLst.append(targ[0])
 		yLst.append(targ[1])
+		zLst.append(targ[2])
 	x = listMedian(xLst)
 	y = listMedian(yLst)
-	z = targetList[xLst.index(x)][2]
+	z = listMedian(zLst)
+	#z = targetList[xLst.index(x)][2]
 	return (x,y,z)
 
 def killTargets(targetList):
@@ -179,36 +192,41 @@ if __name__ == '__main__':
 	fFCascade = cv2.CascadeClassifier(frontFaceRecog)
 	sFCascade = cv2.CascadeClassifier(sideFaceRecog)
 	uBCascade = cv2.CascadeClassifier(upperBodRecog)
+	fgbg = cv2.createBackgroundSubtractorMOG2(history=2000, varThreshold=16, detectShadows=False )
+	
 	while True:
 		t = clock()
 		
 		(color_img, depth_img) = getFrames()
 		if len(color_img) == 0 or len(depth_img) == 0:
 			continue
-		#color_img_small = imutils.resize(color_img, width=min(400, color_img.shape[1]))
-		#depth_img_small = imutils.resize(depth_img, width=320)
-		#print(color_img.shape)
+		
 		vis = color_img.copy()
 		gray = cv2.cvtColor(color_img, cv2.COLOR_BGR2GRAY)
 		gray = cv2.equalizeHist(gray)
+		fgmask = fgbg.apply(gray)
 				
 		rects = faceDetect(gray, fFCascade)
-		draw_rects(vis, rects, (0, 255, 0))
-		loadTargets(rects,depth_img)
-		#depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_img, None, 255, 0), cv2.COLORMAP_JET)
+		if showFace == 1:
+			draw_rects(vis, rects, (0, 255, 0))
+		loadTargets(rects, depth_img, fgmask)
+		
 		
 		rects = faceDetect(gray, sFCascade)
-		draw_rects(vis, rects, (255, 0, 0))
-		loadTargets(rects,depth_img)
+		if showFace == 1:
+			draw_rects(vis, rects, (255, 0, 0))
+		loadTargets(rects, depth_img, fgmask)
 		
 		rects = faceDetect(cv2.flip(gray, 1), sFCascade)
 		rects = flipX(rects)
-		draw_rects(vis, rects, (0, 0, 255))
-		loadTargets(rects,depth_img)
+		if showFace == 1:
+			draw_rects(vis, rects, (0, 0, 255))
+		loadTargets(rects, depth_img, fgmask)
 		
 		rects = faceDetect(gray, uBCascade)
-		draw_rects(vis, rects, (0, 0, 0))
-		loadTargets(rects,depth_img)
+		if showFace == 1:
+			draw_rects(vis, rects, (0, 0, 0))
+		loadTargets(rects, depth_img, fgmask)
 		
 		killTargets(target)
 		if len(target) > minNumTarget:
@@ -223,7 +241,8 @@ if __name__ == '__main__':
 		if display > 0:
 			cv2.namedWindow('RealSense', cv2.WINDOW_NORMAL) #cv2.WINDOW_AUTOSIZE
 			cv2.imshow('RealSense', vis)
-
+			cv2.namedWindow('Motion', cv2.WINDOW_NORMAL)
+			cv2.imshow('Motion', fgmask)
 
 		if 0xFF & cv2.waitKey(1) == 27:
 			break
