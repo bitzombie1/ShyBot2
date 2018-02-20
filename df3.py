@@ -27,7 +27,7 @@ c_width = 320
 c_heigth = 240
 
 # open serial connection with Arduino
-ser = serial.Serial('/dev/ttyACM0',9600,timeout=0)
+ser = serial.Serial('/dev/ttyUSB0',9600,timeout=0)
 
 # Configure depth and color streams
 pipeline = rs.pipeline()
@@ -39,13 +39,15 @@ config.enable_stream(rs.stream.color, c_width, c_heigth, rs.format.bgr8, 30)
 profile = pipeline.start(config)
 time.sleep(2)
 
+
+
 # get depth device and set depth range
 depth_sensor = profile.get_device().first_depth_sensor()
 depth_sensor.set_option(rs.option.motion_range, 99)  #94
 motion_range = depth_sensor.get_option(rs.option.motion_range)
 print("Motion range: ", motion_range)
 
-depth_sensor.set_option(rs.option.filter_option, 1)
+depth_sensor.set_option(rs.option.filter_option, 0)
 filt = depth_sensor.get_option(rs.option.filter_option)
 print("filter option: ", filt)
 
@@ -99,13 +101,13 @@ def faceDetect(img, cascade):
 	return rects
 
 def sendSerial(x,y,z):
+	
 	arduReady = str(ser.readline())
-	if "OK" in arduReady:
-		#print("ok")
-		blah =4
-	else:
-		#print("NAK")
-		blah =5
+	if "ok" in arduReady:
+		outStr = "g" + str(x) + "/" + str(y) + "/" + str(z)
+		ser.write(bytearray(outStr, 'utf-8'))
+	#else:
+	#	print("return: " + arduReady)
 
 def loadTargets(rectList,depthMat,fgMask):
 	for box in rectList:
@@ -114,11 +116,11 @@ def loadTargets(rectList,depthMat,fgMask):
 			#z = listMedian(depthMat[y*2])
 			z = depthMat[y,x]
 			if z == 0:
-				z = 1500
+				z = 16000
 			#print(depthMat[y*2])
 			time = int(clock())
 			target.append([x,y,z,time])
-			#cv2.circle(depthMat,(x*2,y*2),5,(255,255,255))
+			cv2.circle(fgMask,(x,y),5,(255,0,255))
 		
 def findHotTarget(targetList):
 	if len(targetList) < 3:
@@ -192,7 +194,7 @@ if __name__ == '__main__':
 	fFCascade = cv2.CascadeClassifier(frontFaceRecog)
 	sFCascade = cv2.CascadeClassifier(sideFaceRecog)
 	uBCascade = cv2.CascadeClassifier(upperBodRecog)
-	fgbg = cv2.createBackgroundSubtractorMOG2(history=2000, varThreshold=16, detectShadows=False )
+	fgbg = cv2.createBackgroundSubtractorMOG2(history=1000, varThreshold=16, detectShadows=False )
 	
 	while True:
 		t = clock()
