@@ -1,4 +1,4 @@
-update=Saturday, February 10, 2018 'PMt' 06:28:51 PM
+update=Saturday, February 24, 2018 'PMt' 12:55:35 PM
 version=1
 last_client=kicad
 [pcbnew]
@@ -61,3 +61,13 @@ LibName29=contrib
 LibName30=valves
 LibName31=shy_bot_custom_sym
 LibName32=/Users/charlestuttle/Downloads/freetronics_kicad_library-master/freetronics_schematic
+[schematic_editor]
+version=1
+PageLayoutDescrFile=
+PlotDirectoryName=
+SubpartIdSeparator=0
+SubpartFirstId=65
+NetFmtName=
+SpiceForceRefPrefix=0
+SpiceUseNetNumbers=0
+LabSize=60
