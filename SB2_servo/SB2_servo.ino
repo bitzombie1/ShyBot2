@@ -52,11 +52,11 @@ void setup() {
 
 void loop() {
   if(serialCheck()){ commandParser(inString);}
-  /*
+  
   if(analogRead(UPBOARDONPIN) > 400){
     digitalWrite(LEDSWPIN, HIGH);}
     else{digitalWrite(LEDSWPIN, LOW);}
-  */
+  
   if(millis() % 60000 == 0){Serial.println("ok");} //
 
 //  encChk();
