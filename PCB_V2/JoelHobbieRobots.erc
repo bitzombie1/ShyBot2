@@ -1,0 +1,14 @@
+ERC report (Thursday, August 30, 2018 'PMt' 02:57:33 PM, Encoding UTF8 )
+
+***** Sheet /
+ErrType(5): Conflict problem between pins. Severity: error
+    @ (179.07 mm,77.47 mm): Pin 29 (Power output) of component ARDUINO1 is connected to 
+    @ (148.59 mm,82.55 mm): pin 4 (Power output) of component ARDUINO1 (net 25).
+ErrType(4): Conflict problem between pins. Severity: warning
+    @ (148.59 mm,82.55 mm): Pin 4 (Power output) of component ARDUINO1 is connected to 
+    @ (91.44 mm,87.63 mm): pin 3 (Bidirectional) of component Q1 (net 25).
+ErrType(4): Conflict problem between pins. Severity: warning
+    @ (91.44 mm,87.63 mm): Pin 3 (Bidirectional) of component Q1 is connected to 
+    @ (115.57 mm,39.37 mm): pin 1 (Power output) of component #FLG020 (net 25).
+
+ ** ERC messages: 3  Errors 1  Warnings 2

@@ -1117,7 +1117,7 @@
   (segment (start 157.3911 60.8584) (end 156.464 61.7855) (width 0.38) (layer F.Cu) (net 29) (tstamp 5B880C04))
   (segment (start 158.6992 58.3184) (end 158.6992 60.8584) (width 0.38) (layer F.Cu) (net 29))
   (segment (start 158.6992 57.47258) (end 158.6992 58.3184) (width 0.38) (layer F.Cu) (net 29) (tstamp 5B880BF7))
-  (segment (start 196.3554 111.8362) (end 198.6454 111.8362) (width 0.38) (layer F.Cu) (net 60))
+  (segment (start 196.3554 111.8362) (end 198.6454 111.8362) (width 0.38) (layer F.Cu) (net 60) (status C00000))
   (segment (start 175.133 114.0587) (end 178.97602 114.0587) (width 0.38) (layer F.Cu) (net 60))
   (segment (start 192.70396 110.47476) (end 194.0654 111.8362) (width 0.38) (layer F.Cu) (net 60) (tstamp 5B880CA9))
   (segment (start 182.55996 110.47476) (end 192.70396 110.47476) (width 0.38) (layer F.Cu) (net 60) (tstamp 5B880CA7))
